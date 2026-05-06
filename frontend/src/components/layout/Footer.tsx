@@ -73,13 +73,17 @@ const InflatableTube = ({ size, colors, segments = 8 }: TubeProps) => {
     const startAngle = i * sliceAngle + gap / 2;
     const endAngle = (i + 1) * sliceAngle - gap / 2;
 
-    const x1 = cx + rx * Math.cos(startAngle);
-    const y1 = cy + ry * Math.sin(startAngle);
-    const x2 = cx + rx * Math.cos(endAngle);
-    const y2 = cy + ry * Math.sin(endAngle);
+    // Round to 4dp so SSR and client produce identical strings
+    const r4 = (n: number) => Math.round(n * 10000) / 10000;
+    const x1 = r4(cx + rx * Math.cos(startAngle));
+    const y1 = r4(cy + ry * Math.sin(startAngle));
+    const x2 = r4(cx + rx * Math.cos(endAngle));
+    const y2 = r4(cy + ry * Math.sin(endAngle));
     const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+    const rxR = r4(rx);
+    const ryR = r4(ry);
 
-    return { d: `M ${x1} ${y1} A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2}`, color: colors[i % colors.length] };
+    return { d: `M ${x1} ${y1} A ${rxR} ${ryR} 0 ${largeArc} 1 ${x2} ${y2}`, color: colors[i % colors.length] };
   });
 
   return (
@@ -234,17 +238,27 @@ const WaterSurface = () => (
 );
 
 /* ── Caustic light rays diagonal beams ── */
+// Fixed values instead of Math.random() — prevents SSR/client hydration mismatch
+const RAY_STYLES = [
+  { left: "10%", width: "28px", rotate: "-3.2deg" },
+  { left: "25%", width: "38px", rotate: "2.5deg" },
+  { left: "45%", width: "24px", rotate: "-4.1deg" },
+  { left: "60%", width: "44px", rotate: "1.8deg" },
+  { left: "75%", width: "32px", rotate: "-2.8deg" },
+  { left: "88%", width: "20px", rotate: "3.4deg" },
+];
+
 const LightRays = () => (
   <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-20">
-    {[10, 25, 45, 60, 75, 88].map((left, i) => (
+    {RAY_STYLES.map((ray, i) => (
       <motion.div
         key={i}
         className="absolute top-0 bg-gradient-to-b from-white/30 via-white/10 to-transparent"
         style={{
-          left: `${left}%`,
-          width: `${Math.random() * 40 + 20}px`,
+          left: ray.left,
+          width: ray.width,
           height: "70%",
-          transform: `rotate(${Math.random() * 10 - 5}deg)`,
+          transform: `rotate(${ray.rotate})`,
           transformOrigin: "top center",
         }}
         animate={{ opacity: [0.2, 0.6, 0.1, 0.4, 0.2] }}
